@@ -9,7 +9,7 @@ import Foundation
 import Combine
 
 class AIResponder {
-    private let apiKey = "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" // Replace with your actual API key
+    private let apiKey = "xxx" // Replace with your actual API key
     private let baseURL = "https://api.openai.com/v1/chat/completions" // Updated endpoint for chat models
     
     func generateResponse(for prompt: String) -> AnyPublisher<String, Error> {
