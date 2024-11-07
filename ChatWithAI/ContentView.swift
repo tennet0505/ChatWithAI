@@ -6,18 +6,25 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct ContentView: View {
+    @StateObject private var session = UserSession()
+
     var body: some View {
         VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+//            if session.isAuthenticated {
+                ChatView()
+//            } else {
+//                SignInView() // Show SignUpView or SignInView based on needs
+//            }
         }
-        .padding()
+//        .onChange(of: Auth.auth().currentUser) { newUser in
+//            session.isAuthenticated = newUser != nil
+//        }
     }
 }
+
 
 #Preview {
     ContentView()

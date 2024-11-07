@@ -10,83 +10,61 @@ import FirebaseFirestore
 import FirebaseAuth
 
 struct ChatView: View {
-    @State private var message = ""
-    @State private var messages: [Message] = []
-    let userId = Auth.auth().currentUser?.uid ?? "guest"
-    private let db = Firestore.firestore()
-
+    @StateObject private var viewModel = ChatViewModel()
+    @State private var userInput = ""
+    
     var body: some View {
         VStack {
-            ScrollView {
-                ForEach(messages) { message in
-                    VStack(alignment: .leading) {
-                        Text(message.text)
-                            .padding()
-                            .background(Color.gray.opacity(0.2), cornerRadius: 10)
+            ScrollViewReader { proxy in
+                ScrollView(.vertical) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(viewModel.messages) { message in
+                            HStack {
+                                if message.isUser {
+                                    Spacer()
+                                    Text(message.text)
+                                        .padding()
+                                        .background(Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                        .frame(maxWidth: .infinity, alignment: .trailing)
+                                } else {
+                                    Text(message.text)
+                                        .padding()
+                                        .background(Color.gray.opacity(0.2))
+                                        .cornerRadius(10)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    Spacer()
+                                }
+                            }
+                        }
                     }
-                    .padding(.bottom, 10)
+                    .padding()
+                }
+                .onChange(of: viewModel.messages.count) { _ in
+                    // Scroll to the latest message
+                    if let lastMessage = viewModel.messages.last {
+                        withAnimation {
+                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
+                    }
                 }
             }
+            // User input field and send button
             HStack {
-                TextField("Enter message", text: $message)
-                    .padding(10)
+                TextField("Type a message", text: $userInput)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                Button("Send") {
-                    sendMessage()
-                }
-                .padding()
-            }
-            .padding()
-        }
-        .onAppear(perform: loadMessages)
-    }
-
-    func sendMessage() {
-        let newMessage = Message(id: UUID().uuidString, text: message)
-        db.collection("users").document(userId).collection("conversations").addDocument(data: [
-            "text": newMessage.text,
-            "timestamp": Timestamp()
-        ]) { error in
-            if let error = error {
-                print("Error sending message: \(error)")
-            } else {
-                message = ""
-                loadMessages()
-            }
-        }
-    }
-    
-    func loadMessages() {
-        db.collection("users").document(userId).collection("conversations")
-            .order(by: "timestamp", ascending: true)
-            .getDocuments { snapshot, error in
-                if let error = error {
-                    print("Error loading messages: \(error)")
-                } else {
-                    messages = snapshot?.documents.compactMap { document in
-                        let data = document.data()
-                        guard let text = data["text"] as? String else { return nil }
-                        return Message(id: document.documentID, text: text)
-                    } ?? []
+                    .padding()
+                Button(action: {
+                    viewModel.sendMessage(userInput)
+                    userInput = ""
+                }) {
+                    Image(systemName: "paperplane.fill")
+                        .foregroundColor(.blue)
+                        .padding()
                 }
             }
-    }
-    
-    func savePreferences(userId: String, darkModeEnabled: Bool) {
-        let preferencesRef = db.collection("users").document(userId).collection("preferences")
-        preferencesRef.document("darkMode").setData([
-            "enabled": darkModeEnabled
-        ]) { error in
-            if let error = error {
-                print("Error saving preference: \(error)")
-            } else {
-                print("Preference saved")
-            }
         }
+        .padding(.bottom)
     }
-}
-
-struct Message: Identifiable {
-    var id: String
-    var text: String
 }
